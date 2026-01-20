@@ -90,6 +90,17 @@ impl ClusterUsecase {
             .await
     }
 
+    pub async fn update_cluster(&self, cluster: Cluster, password: Option<String>) -> Result<()> {
+        self.cluster_repo.save_cluster(&cluster).await?;
+        if let Some(p) = password {
+            if !p.is_empty() {
+                self.secret_repo
+                    .save_password(&cluster.id.to_string(), &p)?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn delete_cluster(&self, id: Uuid) -> Result<()> {
         self.cluster_repo.delete_cluster(&id).await?;
         let _ = self.secret_repo.delete_password(&id.to_string());

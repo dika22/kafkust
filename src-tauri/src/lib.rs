@@ -65,6 +65,19 @@ async fn add_cluster(
 }
 
 #[tauri::command]
+async fn update_cluster(
+    state: State<'_, AppState>,
+    cluster: Cluster,
+    password: Option<String>,
+) -> Result<(), Error> {
+    state
+        .cluster_usecase
+        .update_cluster(cluster, password)
+        .await
+        .map_err(|e| Error::Internal(e.to_string()))
+}
+
+#[tauri::command]
 async fn create_topic(
     state: State<'_, AppState>,
     cluster_id: Uuid,
@@ -165,6 +178,7 @@ pub fn run() {
             list_clusters,
             list_topics,
             add_cluster,
+            update_cluster,
             delete_cluster,
             test_connection,
             create_topic,

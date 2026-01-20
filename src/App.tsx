@@ -23,6 +23,7 @@ function Dashboard() {
   const [activeView, setActiveView] = useState<'topics' | 'producer'>('topics');
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
   const [isAddingCluster, setIsAddingCluster] = useState(false);
+  const [editingCluster, setEditingCluster] = useState<Cluster | null>(null);
   const [isCreatingTopic, setIsCreatingTopic] = useState(false);
   const [newCluster, setNewCluster] = useState({ name: '', brokers: '', username: '', password: '' });
   const [newTopic, setNewTopic] = useState({ name: '', partitions: 3, replication: 1 });
@@ -70,6 +71,33 @@ function Dashboard() {
     onSuccess: () => {
       refetchClusters();
       setIsAddingCluster(false);
+      setNewCluster({ name: '', brokers: '', username: '', password: '' });
+    },
+  });
+
+  // Update Cluster Mutation
+  const updateClusterMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingCluster) return;
+      const cluster: Cluster = {
+        id: editingCluster.id,
+        name: newCluster.name,
+        brokers: newCluster.brokers,
+        security: newCluster.username ? {
+          type: 'SaslSsl',
+          config: { mechanism: 'Plain', username: newCluster.username }
+        } : { type: 'Plaintext' }
+      };
+
+      return await invoke('update_cluster', {
+        cluster,
+        password: newCluster.password || null
+      });
+    },
+    onSuccess: () => {
+      refetchClusters();
+      setIsAddingCluster(false);
+      setEditingCluster(null);
       setNewCluster({ name: '', brokers: '', username: '', password: '' });
     },
   });
@@ -162,9 +190,26 @@ function Dashboard() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                setEditingCluster(cluster);
+                setNewCluster({
+                  name: cluster.name,
+                  brokers: cluster.brokers,
+                  username: cluster.security.type === 'SaslSsl' ? cluster.security.config.username : '',
+                  password: ''
+                });
+                setIsAddingCluster(true);
+              }}
+              className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/btn:opacity-100 transition-opacity shadow-sm z-10"
+              title="Edit Cluster"
+            >
+              <RefreshCw size={10} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
                 if (confirm('Delete this cluster?')) deleteClusterMutation.mutate(cluster.id);
               }}
-              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/btn:opacity-100 transition-opacity shadow-sm"
+              className="absolute -bottom-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/btn:opacity-100 transition-opacity shadow-sm z-10"
               title="Delete Cluster"
             >
               <Plus size={10} className="rotate-45" />
@@ -387,11 +432,19 @@ function Dashboard() {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
             <div className="p-8 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">New Kafka Connection</h3>
-                <p className="text-slate-500 text-sm mt-1">Configure your cluster access profile.</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  {editingCluster ? 'Edit Kafka Connection' : 'New Kafka Connection'}
+                </h3>
+                <p className="text-slate-500 text-sm mt-1">
+                  {editingCluster ? 'Update your cluster access profile.' : 'Configure your cluster access profile.'}
+                </p>
               </div>
               <button
-                onClick={() => setIsAddingCluster(false)}
+                onClick={() => {
+                  setIsAddingCluster(false);
+                  setEditingCluster(null);
+                  setNewCluster({ name: '', brokers: '', username: '', password: '' });
+                }}
                 className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
               >
                 <Plus className="rotate-45" size={24} />
@@ -443,11 +496,17 @@ function Dashboard() {
                 </div>
               </div>
               <button
-                onClick={() => addClusterMutation.mutate()}
-                disabled={addClusterMutation.isPending || !newCluster.name || !newCluster.brokers}
+                onClick={() => editingCluster ? updateClusterMutation.mutate() : addClusterMutation.mutate()}
+                disabled={
+                  (editingCluster ? updateClusterMutation.isPending : addClusterMutation.isPending) ||
+                  !newCluster.name || !newCluster.brokers
+                }
                 className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl mt-8 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
               >
-                {addClusterMutation.isPending ? 'Connecting...' : 'Establish Connection'}
+                {editingCluster
+                  ? (updateClusterMutation.isPending ? 'Updating...' : 'Update Connection')
+                  : (addClusterMutation.isPending ? 'Connecting...' : 'Establish Connection')
+                }
               </button>
             </div>
           </div>
