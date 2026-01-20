@@ -23,14 +23,14 @@ Kafkust is a lightning-fast, high-performance Kafka desktop client built with **
 Kafkust is available as a standalone desktop application. No terminal or CLI knowledge is required.
 
 ### 🍎 macOS
-1.  **Download**: Get the latest `.dmg` or `.app` from the [Releases](https://github.com/your-username/kafka-expolrer/releases) page.
+1.  **Download**: Get the latest `.dmg` or `.app` from the [Releases](https://github.com/dika22/kafkust/releases) page.
 2.  **Install**: Drag Kafkust to your **Applications** folder.
 3.  **Open**: Double-click to launch.
     > [!NOTE]
     > If you see a warning about an "unidentified developer", right-click the app and select **Open**, or go to **System Settings > Privacy & Security** and click **Open Anyway**.
 
 ### 🪟 Windows
-1.  **Download**: Get the latest `.msi` or `.exe` installer from the [Releases](https://github.com/your-username/kafka-expolrer/releases) page.
+1.  **Download**: Get the latest `.msi` or `.exe` installer from the [Releases](https://github.com/dika22/kafkust/releases) page.
 2.  **Install**: Run the installer and follow the on-screen instructions.
 3.  **Launch**: Open Kafkust from your Start Menu.
 
