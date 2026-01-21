@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from '@tanstack/react-query'
-import { invoke } from '@tauri-apps/api/core'
-import { Database, Play, RefreshCw, Trash2, Plus, Server, Shield, HardDrive, Send, LayoutGrid, Sun, Moon } from 'lucide-react'
+import { apiBridge } from './api/bridge'
+import { Database, RefreshCw, Plus, Server, Shield, HardDrive, Send, LayoutGrid, Sun, Moon, Inbox } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ProducerLab } from './components/ProducerLab'
+import { MessageViewer } from './components/MessageViewer'
 
 const queryClient = new QueryClient()
 
@@ -20,7 +21,7 @@ interface Topic {
 }
 
 function Dashboard() {
-  const [activeView, setActiveView] = useState<'topics' | 'producer'>('topics');
+  const [activeView, setActiveView] = useState<'topics' | 'producer' | 'consumer'>('topics');
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
   const [isAddingCluster, setIsAddingCluster] = useState(false);
   const [editingCluster, setEditingCluster] = useState<Cluster | null>(null);
@@ -28,6 +29,8 @@ function Dashboard() {
   const [newCluster, setNewCluster] = useState({ name: '', brokers: '', username: '', password: '' });
   const [newTopic, setNewTopic] = useState({ name: '', partitions: 3, replication: 1 });
   const [targetTopic, setTargetTopic] = useState<string>('');
+  const [topicSearch, setTopicSearch] = useState('');
+  const [selectedTopicForCount, setSelectedTopicForCount] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
   });
@@ -46,7 +49,7 @@ function Dashboard() {
   // Fetch Clusters
   const { data: clusters, isLoading: isLoadingClusters, refetch: refetchClusters } = useQuery<Cluster[]>({
     queryKey: ['clusters'],
-    queryFn: () => invoke<Cluster[]>('list_clusters'),
+    queryFn: () => apiBridge<Cluster[]>('list_clusters'),
   })
 
   // Add Cluster Mutation
@@ -63,7 +66,7 @@ function Dashboard() {
         } : { type: 'Plaintext' }
       };
 
-      return await invoke('add_cluster', {
+      return await apiBridge('add_cluster', {
         cluster,
         password: newCluster.password || null
       });
@@ -89,7 +92,7 @@ function Dashboard() {
         } : { type: 'Plaintext' }
       };
 
-      return await invoke('update_cluster', {
+      return await apiBridge('update_cluster', {
         cluster,
         password: newCluster.password || null
       });
@@ -106,7 +109,7 @@ function Dashboard() {
   const createTopicMutation = useMutation({
     mutationFn: async () => {
       if (!selectedClusterId) return;
-      return await invoke('create_topic', {
+      return await apiBridge('create_topic', {
         clusterId: selectedClusterId,
         name: newTopic.name,
         partitions: Number(newTopic.partitions),
@@ -125,7 +128,7 @@ function Dashboard() {
 
   const deleteClusterMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await invoke('delete_cluster', { clusterId: id });
+      return await apiBridge('delete_cluster', { clusterId: id });
     },
     onSuccess: () => {
       refetchClusters();
@@ -157,9 +160,22 @@ function Dashboard() {
         console.warn('topics query ran without selectedClusterId');
         return [];
       }
-      return await invoke<Topic[]>('list_topics', { clusterId: selectedClusterId });
+      return await apiBridge<Topic[]>('list_topics', { clusterId: selectedClusterId });
     },
     placeholderData: (prev) => prev,
+  })
+
+  // Fetch Message Count for Selected Topic
+  const { data: topicMessageCount, isLoading: isLoadingMessageCount } = useQuery<number>({
+    queryKey: ['topicMessageCount', selectedClusterId, selectedTopicForCount],
+    enabled: !!selectedClusterId && !!selectedTopicForCount,
+    queryFn: async () => {
+      if (!selectedClusterId || !selectedTopicForCount) return 0;
+      return await apiBridge<number>('get_topic_message_count', {
+        clusterId: selectedClusterId,
+        topic: selectedTopicForCount
+      });
+    },
   })
 
   return (
@@ -224,16 +240,23 @@ function Dashboard() {
         >
           <Plus size={20} className="group-hover:scale-110 transition-transform" />
         </button>
+        <button
+          onClick={toggleTheme}
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-500/10 dark:hover:bg-slate-800 group"
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark' ? <Sun size={20} className="group-hover:scale-110 transition-transform" /> : <Moon size={20} className="group-hover:scale-110 transition-transform" />}
+        </button>
       </div>
 
       {/* Workspace Sidebar */}
       <div className="w-60 border-r border-slate-200 dark:border-slate-900 flex flex-col bg-slate-50/50 dark:bg-slate-950/40 backdrop-blur-xl shrink-0 overflow-y-auto">
-        <div className="p-5 border-b border-slate-200 dark:border-slate-900">
-          <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-            {clusters?.find(c => c.id === selectedClusterId)?.name || 'Kafkust'}
+        <div className="p-6 pb-2">
+          <h1 className="text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400">
+            {clusters?.find(c => c.id === selectedClusterId)?.name || 'Local Kafka'}
           </h1>
           <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest font-bold">
-            {clusters?.find(c => c.id === selectedClusterId)?.brokers || 'No Connection'}
+            {clusters?.find(c => c.id === selectedClusterId)?.brokers || 'LOCALHOST:9092'}
           </div>
         </div>
 
@@ -253,56 +276,52 @@ function Dashboard() {
             Producer
           </button>
           <button
-            onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+            onClick={() => setActiveView('consumer')}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeView === 'consumer' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900'}`}
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            <Inbox size={18} />
+            Consumer
           </button>
         </nav>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <div className="w-full h-px bg-slate-100 dark:bg-slate-800 my-4"></div>
+
+        <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
+          <div className="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold px-2 mb-1">Topics</div>
+          {isLoadingTopics ? (
+            <div className="flex items-center justify-center py-2">
+              <div className="w-3 h-3 border-2 border-slate-200 dark:border-slate-700 border-t-blue-500 rounded-full animate-spin"></div>
+            </div>
+          ) : topics?.length === 0 ? (
+            <div className="text-[10px] text-slate-400 dark:text-slate-500 px-2 py-1">No topics</div>
+          ) : (
+            topics?.filter((topic) => topic.name.toLowerCase().includes(topicSearch.toLowerCase())).map((topic) => (
+              <button
+                key={topic.name}
+                onClick={() => {
+                  setTargetTopic(topic.name);
+                  setActiveView('consumer');
+                }}
+                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-all text-left ${targetTopic === topic.name
+                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                  }`}
+              >
+                <HardDrive size={12} className="shrink-0 opacity-60" />
+                <span className="truncate">{topic.name}</span>
+              </button>
+            ))
+          )}
         </nav>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-900">
-          <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-800">
-            <div className="text-[10px] text-slate-500 mb-2 uppercase tracking-widest font-black">Cluster Health</div>
-            {!selectedClusterId ? (
-              <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 font-medium">
-                <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700"></div>
-                No Cluster Selected
-              </div>
-            ) : topicError ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-sm text-red-500 dark:text-red-400 font-medium">
-                  <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
-                  Connection Failed
-                </div>
-                <button
-                  onClick={() => refetchTopics()}
-                  className="text-[10px] text-left hover:underline text-blue-500 dark:text-blue-400 font-bold"
-                >
-                  Retry Connection
-                </button>
-              </div>
-            ) : isLoadingTopics ? (
-              <div className="flex items-center gap-2 text-sm text-blue-500 dark:text-blue-400 font-medium">
-                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-                Connecting...
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-green-500 dark:text-green-400 font-medium">
-                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
-                Active Connection
-              </div>
-            )}
-          </div>
-          {selectedClusterId && clusters && (
-            <div className="mt-4 p-2 bg-slate-100 dark:bg-slate-900/30 rounded-xl border border-dotted border-slate-300 dark:border-slate-800">
-              <div className="text-[9px] text-slate-400 font-bold uppercase mb-1">Raw Node ID</div>
-              <div className="text-[10px] font-mono text-slate-500 truncate select-all">{selectedClusterId}</div>
+          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-2">Cluster Health</div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-green-500">
+              <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
+              Active Connection
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -310,30 +329,32 @@ function Dashboard() {
       <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-950 min-w-0 w-full">
         {activeView === 'topics' ? (
           <>
-            <header className="h-16 border-b border-slate-200 dark:border-slate-900 flex items-center justify-between px-8 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-10 transition-colors">
+            <header className="h-20 flex items-center justify-between px-8 sticky top-0 z-10 bg-white dark:bg-slate-950">
               <div className="flex items-center gap-3">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Topics Explorer</h2>
-                <span className="bg-slate-100 dark:bg-slate-900 h-6 px-2 flex items-center rounded-md text-[10px] font-bold text-slate-500 border border-slate-200 dark:border-slate-800 transition-colors">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Topics Explorer</h2>
+                <span className="bg-slate-100 dark:bg-slate-800 mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   {topics?.length || 0} TOTAL
                 </span>
               </div>
-              <div className="flex gap-4">
+              <div className="flex gap-3">
                 <div className="relative group">
                   <input
                     type="text"
                     placeholder="Search topics..."
-                    className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-1.5 text-sm focus:outline-none focus:border-blue-500/50 w-64 transition-all text-slate-900 dark:text-white"
+                    value={topicSearch}
+                    onChange={(e) => setTopicSearch(e.target.value)}
+                    className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500/50 w-64 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
                   />
                 </div>
                 <button
                   onClick={() => refetchTopics()}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-100 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-800"
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all border border-slate-200 dark:border-slate-800"
                 >
                   <RefreshCw size={18} className={isLoadingTopics ? "animate-spin" : ""} />
                 </button>
                 <button
                   onClick={() => setIsCreatingTopic(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95 text-white"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm text-white"
                 >
                   <Plus size={18} />
                   Create Topic
@@ -374,53 +395,80 @@ function Dashboard() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                  {topics?.map((topic) => (
-                    <div
-                      key={topic.name}
-                      onClick={() => {
-                        setTargetTopic(topic.name);
-                        setActiveView('producer');
-                      }}
-                      className="bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/60 rounded-2xl p-5 hover:border-blue-500/30 transition-all hover:bg-slate-50 dark:hover:bg-slate-900/50 group relative overflow-hidden cursor-pointer active:scale-[0.98] shadow-sm hover:shadow-md dark:shadow-none"
-                    >
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none group-hover:bg-blue-500/10 transition-all"></div>
+                <div className="grid grid-cols-4 gap-3">
+                  {topics?.filter((topic) => topic.name.toLowerCase().includes(topicSearch.toLowerCase())).map((topic) => {
+                    const isSelected = selectedTopicForCount === topic.name;
+                    return (
+                      <div
+                        key={topic.name}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isSelected) {
+                            setTargetTopic(topic.name);
+                            setActiveView('consumer');
+                          } else {
+                            setSelectedTopicForCount(topic.name);
+                          }
+                        }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setTargetTopic(topic.name);
+                          setActiveView('consumer');
+                        }}
+                        className={`bg-white dark:bg-slate-900 border rounded-xl p-3 transition-all hover:shadow-md dark:hover:shadow-none group cursor-pointer flex flex-col ${isSelected
+                          ? 'border-blue-500 ring-1 ring-blue-500'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-700'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <HardDrive size={14} strokeWidth={1.5} />
+                          </div>
+                          <h3 className="text-sm font-bold truncate text-slate-900 dark:text-white flex-1">{topic.name}</h3>
+                        </div>
 
-                      <div className="flex justify-between items-start mb-4 relative z-10">
-                        <div className="bg-slate-100 dark:bg-slate-800/80 p-2.5 rounded-xl text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-slate-700/50 transition-colors">
-                          <HardDrive size={20} />
+                        <div className="flex flex-wrap gap-2 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                          <div className="flex items-center gap-1">
+                            <div className="w-1 h-1 rounded-full bg-blue-400"></div>
+                            {topic.partitions}P
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-1 h-1 rounded-full bg-blue-400"></div>
+                            {topic.replication_factor}R
+                          </div>
+                          {isSelected && (
+                            <div className="flex items-center gap-1 text-green-500">
+                              <div className="w-1 h-1 rounded-full bg-green-500"></div>
+                              {isLoadingMessageCount ? '...' : `${topicMessageCount?.toLocaleString() ?? 0}M`}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0 text-slate-400">
-                          <button className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg hover:text-slate-900 dark:hover:text-white transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700/50">
-                            <Play size={14} />
-                          </button>
-                          <button className="p-2 hover:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+
+                        {isSelected && (
+                          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
+                            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                              Click to view messages
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <h3 className="text-base font-bold truncate mb-2 text-slate-800 dark:text-slate-100 relative z-10 transition-colors">{topic.name}</h3>
-                      <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase relative z-10 transition-colors">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500/60"></span>
-                          {topic.partitions} Partitions
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/60"></span>
-                          {topic.replication_factor} Replicas
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </main>
           </>
-        ) : (
+        ) : activeView === 'producer' ? (
           <ProducerLab
             selectedClusterId={selectedClusterId}
             initialTopic={targetTopic}
             onTopicChange={setTargetTopic}
+            theme={theme}
+          />
+        ) : (
+          <MessageViewer
+            selectedClusterId={selectedClusterId}
+            topic={targetTopic}
             theme={theme}
           />
         )}

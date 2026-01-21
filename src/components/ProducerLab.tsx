@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { invoke } from '@tauri-apps/api/core';
+import { apiBridge } from '../api/bridge';
 import { Send, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface ProducerLabProps {
@@ -36,7 +36,7 @@ export function ProducerLab({ selectedClusterId, initialTopic = '', onTopicChang
 
         try {
             if (!selectedClusterId) throw new Error('No cluster selected. Please select a cluster in the sidebar.');
-            await invoke('publish_message', {
+            await apiBridge('publish_message', {
                 clusterId: selectedClusterId,
                 topic,
                 key: key || null,

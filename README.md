@@ -1,38 +1,52 @@
 # Kafkust 🚀
 
-Kafkust is a lightning-fast, high-performance Kafka desktop client built with **Rust (Tauri 2.0)** and **React 19**. It aims to replace heavy, JVM-based Kafka GUIs with a native experience that consumes significantly less memory.
+Kafkust is a lightning-fast, high-performance Kafka client built with **Rust (Tauri 2.0)** and **React 19**. It aims to replace heavy, JVM-based Kafka GUIs with a native experience that consumes significantly less memory.
+
+**Available as both a Desktop App and Web App!**
 
 ## 🎯 Key Features
 
--   **Native Performance**: Direct Kafka interaction using `rdkafka` (based on `librdkafka`).
--   **Low Memory Footprint**: Uses <80MB RAM even with heavy message streams.
--   **Clean Architecture**: Backend organized into Domain, Usecase, Infrastructure, and Interface layers.
--   **Modern UI**: Sleek, dark-mode first interface built with React 19 and Tailwind CSS v4.
--   **Cluster Management**: Easily connect to local or remote Kafka brokers.
--   **Topic Explorer**: View topic metadata, partition counts, and replication status.
+-   **Dual Mode**: Run as a native desktop app OR in your browser
+-   **Native Performance**: Direct Kafka interaction using `rdkafka` (desktop) or `kafkajs` (web)
+-   **Low Memory Footprint**: Desktop uses <80MB RAM even with heavy message streams
+-   **Clean Architecture**: Backend organized into Domain, Usecase, Infrastructure, and Interface layers
+-   **Modern UI**: Sleek, dark-mode first interface built with React 19 and Tailwind CSS v4
+-   **Cluster Management**: Easily connect to local or remote Kafka brokers
+-   **Topic Explorer**: View topic metadata, partition counts, and replication status
+-   **Producer Lab**: Compose and publish messages with a built-in JSON editor
+-   **Message Viewer**: Browse and inspect messages from any topic
 
 ## 🛠️ Technology Stack
 
--   **Backend**: [Tauri 2.0](https://tauri.app/), [Rust](https://www.rust-lang.org/), [rdkafka](https://github.com/fede1024/rust-rdkafka)
+-   **Desktop Backend**: [Tauri 2.0](https://tauri.app/), [Rust](https://www.rust-lang.org/), [rdkafka](https://github.com/fede1024/rust-rdkafka)
+-   **Web Backend**: [Express](https://expressjs.com/), [KafkaJS](https://kafka.js.org/), [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
 -   **Frontend**: [React 19](https://react.dev/), [Vite](https://vitejs.dev/), [Tailwind CSS v4](https://tailwindcss.com/)
 -   **State Management**: [TanStack Query](https://tanstack.com/query/latest)
 -   **Icons**: [Lucide React](https://lucide.dev/)
 
-## � Download & Install
+## 📦 Download & Install
 
 Kafkust is available as a standalone desktop application. No terminal or CLI knowledge is required.
 
-### 🍎 macOS
-1.  **Download**: Get the latest `.dmg` or `.app` from the [Releases](https://github.com/dika22/kafkust/releases) page.
-2.  **Install**: Drag Kafkust to your **Applications** folder.
-3.  **Open**: Double-click to launch.
-    > [!NOTE]
-    > If you see a warning about an "unidentified developer", right-click the app and select **Open**, or go to **System Settings > Privacy & Security** and click **Open Anyway**.
 
-### 🪟 Windows
-1.  **Download**: Get the latest `.msi` or `.exe` installer from the [Releases](https://github.com/dika22/kafkust/releases) page.
-2.  **Install**: Run the installer and follow the on-screen instructions.
-3.  **Launch**: Open Kafkust from your Start Menu.
+### 🐧 Linux
+
+```bash
+# Install prerequisites (Debian/Ubuntu)
+sudo apt update
+sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Clone and build
+git clone https://github.com/dika22/kafkust.git
+cd kafkust
+npm install
+npm run tauri build
+
+# The app will be in src-tauri/target/release/bundle/
+```
 
 ---
 
@@ -50,32 +64,56 @@ Kafkust is available as a standalone desktop application. No terminal or CLI kno
 If you want to build Kafkust from source or contribute to the project:
 
 ### Prerequisites
--   **Rust**: [Install Rust](https://www.rust-lang.org/tools/install)
--   **Node.js**: [Install Node.js](https://nodejs.org/)
+-   **Node.js**: [Install Node.js](https://nodejs.org/) (v18+)
+-   **Rust**: [Install Rust](https://www.rust-lang.org/tools/install) (only for desktop mode)
 
 ### Setup
-1.  **Clone & Install**:
-    ```bash
-    git clone https://github.com/your-username/kafka-expolrer.git
-    cd kafka-expolrer
-    npm install
-    ```
-2.  **Run Development Mode**:
-    ```bash
-    npm run tauri dev
-    ```
-3.  **Build Binary**:
-    ```bash
-    npm run tauri build
-    ```
+```bash
+git clone https://github.com/dika22/kafkust.git
+cd kafkust
+npm install
+cd server && npm install && cd ..
+```
+
+### Running the App
+
+#### Web Mode (Browser)
+Run both the Node.js backend server and Vite frontend:
+```bash
+npm run web
+```
+Then open http://localhost:5173 in your browser.
+
+#### Desktop Mode (Native)
+Run the Tauri desktop app with native Rust backend:
+```bash
+npm run tauri dev
+```
+
+#### Build Desktop Binary
+```bash
+npm run tauri build
+# Output: src-tauri/target/release/bundle/
+```
 
 ## 📂 Project Structure
 
 ```
-kafka-expolrer/
-├── src/                # React Frontend logic
-├── src-tauri/          # Rust Backend (Tauri Core)
-└── kafkust.md          # Project roadmap and requirements
+kafkust/
+├── src/                # React Frontend
+│   ├── api/            # API bridge (Tauri/HTTP auto-detection)
+│   └── components/     # React components
+├── src-tauri/          # Rust Backend (Desktop)
+│   └── src/
+│       ├── domain/     # Domain models
+│       ├── infrastructure/  # Kafka & DB implementations
+│       └── usecase/    # Business logic
+├── server/             # Node.js Backend (Web)
+│   └── src/
+│       ├── index.ts    # Express API server
+│       ├── db.ts       # SQLite database
+│       └── kafka.ts    # KafkaJS operations
+└── kafkust.md          # Project roadmap
 ```
 
 ## 🤝 Contributing

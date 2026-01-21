@@ -1,9 +1,12 @@
 use crate::domain::cluster::cluster::{Cluster, SaslMechanism, SecurityConfig};
-use crate::domain::topic::Topic;
+use crate::domain::topic::{KafkaMessage, Topic};
 use anyhow::Result;
 use rdkafka::admin::AdminClient;
 use rdkafka::client::DefaultClientContext;
 use rdkafka::config::ClientConfig;
+use rdkafka::consumer::{BaseConsumer, Consumer};
+use rdkafka::message::Message;
+use rdkafka::TopicPartitionList;
 use std::time::Duration;
 
 pub struct KafkaInfrastructure;
@@ -181,5 +184,128 @@ impl KafkaInfrastructure {
             .map_err(|(e, _)| anyhow::anyhow!("Failed to publish message: {}", e))?;
 
         Ok(())
+    }
+
+    pub async fn consume_messages(
+        &self,
+        cluster: &Cluster,
+        password: Option<String>,
+        topic: &str,
+        max_messages: usize,
+    ) -> Result<Vec<KafkaMessage>> {
+        let mut config = self.create_config(cluster, password);
+        config.set("group.id", format!("kafkust-consumer-{}", uuid::Uuid::new_v4()));
+        config.set("auto.offset.reset", "latest");
+        config.set("enable.auto.commit", "false");
+
+        let consumer: BaseConsumer = config.create()?;
+
+        let metadata = consumer
+            .fetch_metadata(Some(topic), Duration::from_secs(5))
+            .map_err(|e| anyhow::anyhow!("Failed to fetch topic metadata: {}", e))?;
+
+        let topic_metadata = metadata
+            .topics()
+            .iter()
+            .find(|t| t.name() == topic)
+            .ok_or_else(|| anyhow::anyhow!("Topic not found"))?;
+
+        let partition_count = topic_metadata.partitions().len() as i32;
+
+        let mut tpl = TopicPartitionList::new();
+        for p in 0..partition_count {
+            tpl.add_partition(topic, p);
+        }
+
+        let watermarks_result: Result<Vec<(i32, i64, i64)>, _> = (0..partition_count)
+            .map(|p| {
+                consumer
+                    .fetch_watermarks(topic, p, Duration::from_secs(5))
+                    .map(|(low, high)| (p, low, high))
+            })
+            .collect();
+
+        let watermarks = watermarks_result
+            .map_err(|e| anyhow::anyhow!("Failed to fetch watermarks: {}", e))?;
+
+        let mut offset_tpl = TopicPartitionList::new();
+        for (partition, _low, high) in &watermarks {
+            let start_offset = (*high as usize).saturating_sub(max_messages / partition_count as usize);
+            offset_tpl
+                .add_partition_offset(topic, *partition, rdkafka::Offset::Offset(start_offset as i64))
+                .map_err(|e| anyhow::anyhow!("Failed to set offset: {}", e))?;
+        }
+
+        consumer
+            .assign(&offset_tpl)
+            .map_err(|e| anyhow::anyhow!("Failed to assign partitions: {}", e))?;
+
+        let mut messages = Vec::new();
+        let timeout = Duration::from_millis(100);
+        let max_attempts = 50;
+
+        for _ in 0..max_attempts {
+            if messages.len() >= max_messages {
+                break;
+            }
+
+            match consumer.poll(timeout) {
+                Some(Ok(msg)) => {
+                    let kafka_msg = KafkaMessage {
+                        partition: msg.partition(),
+                        offset: msg.offset(),
+                        timestamp: msg.timestamp().to_millis(),
+                        key: msg.key().map(|k| String::from_utf8_lossy(k).to_string()),
+                        payload: msg.payload().map(|p| String::from_utf8_lossy(p).to_string()),
+                    };
+                    messages.push(kafka_msg);
+                }
+                Some(Err(e)) => {
+                    eprintln!("Error consuming message: {}", e);
+                }
+                None => {
+                    if messages.is_empty() {
+                        continue;
+                    }
+                    break;
+                }
+            }
+        }
+
+        messages.sort_by(|a, b| b.offset.cmp(&a.offset));
+
+        Ok(messages)
+    }
+
+    pub async fn get_topic_message_count(
+        &self,
+        cluster: &Cluster,
+        password: Option<String>,
+        topic: &str,
+    ) -> Result<i64> {
+        let config = self.create_config(cluster, password);
+        let consumer: BaseConsumer = config.create()?;
+
+        let metadata = consumer
+            .fetch_metadata(Some(topic), Duration::from_secs(5))
+            .map_err(|e| anyhow::anyhow!("Failed to fetch topic metadata: {}", e))?;
+
+        let topic_metadata = metadata
+            .topics()
+            .iter()
+            .find(|t| t.name() == topic)
+            .ok_or_else(|| anyhow::anyhow!("Topic not found"))?;
+
+        let partition_count = topic_metadata.partitions().len() as i32;
+
+        let mut total_messages: i64 = 0;
+        for p in 0..partition_count {
+            let (low, high) = consumer
+                .fetch_watermarks(topic, p, Duration::from_secs(5))
+                .map_err(|e| anyhow::anyhow!("Failed to fetch watermarks: {}", e))?;
+            total_messages += high - low;
+        }
+
+        Ok(total_messages)
     }
 }

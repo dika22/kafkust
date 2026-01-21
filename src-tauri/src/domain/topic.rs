@@ -15,3 +15,12 @@ pub struct Partition {
     pub replicas: Vec<i32>,
     pub isrs: Vec<i32>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct KafkaMessage {
+    pub partition: i32,
+    pub offset: i64,
+    pub timestamp: Option<i64>,
+    pub key: Option<String>,
+    pub payload: Option<String>,
+}

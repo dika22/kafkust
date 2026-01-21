@@ -1,5 +1,5 @@
 use crate::domain::cluster::cluster::Cluster;
-use crate::domain::topic::Topic;
+use crate::domain::topic::{KafkaMessage, Topic};
 use crate::infrastructure::kafka::KafkaInfrastructure;
 use crate::infrastructure::persistence::keyring_secret_repository::KeyringSecretRepository;
 use crate::infrastructure::persistence::sqlite_cluster_repository::SqliteClusterRepository;
@@ -117,5 +117,38 @@ impl ClusterUsecase {
         let password = self.secret_repo.get_password(&cluster.id.to_string()).ok();
 
         self.kafka_infra.check_connection(&cluster, password).await
+    }
+
+    pub async fn consume_messages(
+        &self,
+        id: Uuid,
+        topic: String,
+        max_messages: usize,
+    ) -> Result<Vec<KafkaMessage>> {
+        let clusters = self.cluster_repo.list_clusters().await?;
+        let cluster = clusters
+            .into_iter()
+            .find(|c| c.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Cluster not found"))?;
+
+        let password = self.secret_repo.get_password(&cluster.id.to_string()).ok();
+
+        self.kafka_infra
+            .consume_messages(&cluster, password, &topic, max_messages)
+            .await
+    }
+
+    pub async fn get_topic_message_count(&self, id: Uuid, topic: String) -> Result<i64> {
+        let clusters = self.cluster_repo.list_clusters().await?;
+        let cluster = clusters
+            .into_iter()
+            .find(|c| c.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Cluster not found"))?;
+
+        let password = self.secret_repo.get_password(&cluster.id.to_string()).ok();
+
+        self.kafka_infra
+            .get_topic_message_count(&cluster, password, &topic)
+            .await
     }
 }

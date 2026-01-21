@@ -3,7 +3,7 @@ mod infrastructure;
 mod usecase;
 
 use crate::domain::cluster::cluster::Cluster;
-use crate::domain::topic::Topic;
+use crate::domain::topic::{KafkaMessage, Topic};
 use crate::infrastructure::kafka::KafkaInfrastructure;
 use crate::infrastructure::persistence::keyring_secret_repository::KeyringSecretRepository;
 use crate::infrastructure::persistence::sqlite_cluster_repository::SqliteClusterRepository;
@@ -125,6 +125,33 @@ async fn test_connection(state: State<'_, AppState>, cluster_id: Uuid) -> Result
         .map_err(|e| Error::Kafka(e.to_string()))
 }
 
+#[tauri::command]
+async fn consume_messages(
+    state: State<'_, AppState>,
+    cluster_id: Uuid,
+    topic: String,
+    max_messages: usize,
+) -> Result<Vec<KafkaMessage>, Error> {
+    state
+        .cluster_usecase
+        .consume_messages(cluster_id, topic, max_messages)
+        .await
+        .map_err(|e| Error::Kafka(e.to_string()))
+}
+
+#[tauri::command]
+async fn get_topic_message_count(
+    state: State<'_, AppState>,
+    cluster_id: Uuid,
+    topic: String,
+) -> Result<i64, Error> {
+    state
+        .cluster_usecase
+        .get_topic_message_count(cluster_id, topic)
+        .await
+        .map_err(|e| Error::Kafka(e.to_string()))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -182,7 +209,9 @@ pub fn run() {
             delete_cluster,
             test_connection,
             create_topic,
-            publish_message
+            publish_message,
+            consume_messages,
+            get_topic_message_count
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
