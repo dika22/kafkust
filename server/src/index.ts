@@ -14,6 +14,8 @@ import {
   testConnection,
   listTopics,
   createTopic,
+  deleteTopic,
+  addPartitions,
   publishMessage,
   consumeMessages,
   getTopicMessageCount,
@@ -114,6 +116,37 @@ app.post(
     }
     await createTopic(cluster, name, partitions, replication);
     res.status(201).json({ success: true });
+  })
+);
+
+app.delete(
+  '/api/clusters/:id/topics/:topic',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id as string;
+    const topicName = decodeURIComponent(req.params.topic as string);
+    const cluster = getCluster(id);
+    if (!cluster) {
+      res.status(404).json({ error: 'Cluster not found' });
+      return;
+    }
+    await deleteTopic(cluster, topicName);
+    res.json({ success: true });
+  })
+);
+
+app.put(
+  '/api/clusters/:id/topics/:topic/partitions',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id as string;
+    const topicName = decodeURIComponent(req.params.topic as string);
+    const { partitions } = req.body as { partitions: number };
+    const cluster = getCluster(id);
+    if (!cluster) {
+      res.status(404).json({ error: 'Cluster not found' });
+      return;
+    }
+    await addPartitions(cluster, topicName, partitions);
+    res.json({ success: true });
   })
 );
 

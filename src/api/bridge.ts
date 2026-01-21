@@ -81,6 +81,12 @@ const commandMappings: Record<string, CommandMapper> = {
   },
   
   get_cluster_info: (args) => httpRequest('GET', `/clusters/${args?.clusterId}/info`),
+  
+  delete_topic: (args) => 
+    httpRequest('DELETE', `/clusters/${args?.clusterId}/topics/${encodeURIComponent(args?.topic)}`),
+  
+  add_partitions: (args) => 
+    httpRequest('PUT', `/clusters/${args?.clusterId}/topics/${encodeURIComponent(args?.topic)}/partitions`, { partitions: args?.partitions }),
 };
 
 // Bridge function that calls Tauri invoke or HTTP API

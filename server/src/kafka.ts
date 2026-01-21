@@ -133,6 +133,40 @@ export async function createTopic(
   }
 }
 
+export async function deleteTopic(cluster: Cluster, topicName: string): Promise<void> {
+  const password = getPassword(cluster.id);
+  const kafka = createKafkaClient(cluster, password);
+  const admin = kafka.admin();
+  try {
+    await admin.connect();
+    await admin.deleteTopics({
+      topics: [topicName],
+      timeout: 30000,
+    });
+  } finally {
+    await admin.disconnect();
+  }
+}
+
+export async function addPartitions(
+  cluster: Cluster,
+  topicName: string,
+  newPartitionCount: number
+): Promise<void> {
+  const password = getPassword(cluster.id);
+  const kafka = createKafkaClient(cluster, password);
+  const admin = kafka.admin();
+  try {
+    await admin.connect();
+    await admin.createPartitions({
+      topicPartitions: [{ topic: topicName, count: newPartitionCount }],
+      timeout: 30000,
+    });
+  } finally {
+    await admin.disconnect();
+  }
+}
+
 export async function publishMessage(
   cluster: Cluster,
   topic: string,

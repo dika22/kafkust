@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider, useQuery, useMutation } from '@tanstack/react-query'
 import { apiBridge } from './api/bridge'
-import { Database, RefreshCw, Plus, Server, Shield, HardDrive, Send, LayoutGrid, Sun, Moon, Inbox } from 'lucide-react'
+import { Database, RefreshCw, Plus, Server, Shield, HardDrive, Send, LayoutGrid, Sun, Moon, Inbox, Trash2, Settings } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ProducerLab } from './components/ProducerLab'
 import { MessageViewer } from './components/MessageViewer'
@@ -38,8 +38,11 @@ function Dashboard() {
   const [isAddingCluster, setIsAddingCluster] = useState(false);
   const [editingCluster, setEditingCluster] = useState<Cluster | null>(null);
   const [isCreatingTopic, setIsCreatingTopic] = useState(false);
+  const [isEditingTopic, setIsEditingTopic] = useState(false);
+  const [editingTopicName, setEditingTopicName] = useState<string | null>(null);
   const [newCluster, setNewCluster] = useState({ name: '', brokers: '', username: '', password: '' });
   const [newTopic, setNewTopic] = useState({ name: '', partitions: 3, replication: 1 });
+  const [editTopicPartitions, setEditTopicPartitions] = useState(1);
   const [targetTopic, setTargetTopic] = useState<string>('');
   const [topicSearch, setTopicSearch] = useState('');
   const [selectedTopicForCount, setSelectedTopicForCount] = useState<string | null>(null);
@@ -148,6 +151,41 @@ function Dashboard() {
         setSelectedClusterId(null);
       }
     },
+  });
+
+  // Delete Topic Mutation
+  const deleteTopicMutation = useMutation({
+    mutationFn: async (topicName: string) => {
+      if (!selectedClusterId) return;
+      return await apiBridge('delete_topic', { clusterId: selectedClusterId, topic: topicName });
+    },
+    onSuccess: () => {
+      refetchTopics();
+      setSelectedTopicForCount(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete topic:', error);
+    }
+  });
+
+  // Add Partitions Mutation
+  const addPartitionsMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedClusterId || !editingTopicName) return;
+      return await apiBridge('add_partitions', { 
+        clusterId: selectedClusterId, 
+        topic: editingTopicName,
+        partitions: editTopicPartitions
+      });
+    },
+    onSuccess: () => {
+      refetchTopics();
+      setIsEditingTopic(false);
+      setEditingTopicName(null);
+    },
+    onError: (error) => {
+      console.error('Failed to add partitions:', error);
+    }
   });
 
   // Set default cluster if none selected
@@ -500,9 +538,38 @@ function Dashboard() {
                         </div>
 
                         {isSelected && (
-                          <div className="mt-1.5 md:mt-2 pt-1.5 md:pt-2 border-t border-slate-100 dark:border-slate-800/50">
+                          <div className="mt-1.5 md:mt-2 pt-1.5 md:pt-2 border-t border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
                             <div className="text-dynamic-2xs text-blue-600 dark:text-blue-400 font-semibold">
                               Click to view messages
+                            </div>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const currentTopic = topics?.find(t => t.name === topic.name);
+                                  if (currentTopic) {
+                                    setEditingTopicName(topic.name);
+                                    setEditTopicPartitions(currentTopic.partitions + 1);
+                                    setIsEditingTopic(true);
+                                  }
+                                }}
+                                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-blue-500 transition-colors"
+                                title="Edit Partitions"
+                              >
+                                <Settings className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Delete topic "${topic.name}"? This cannot be undone.`)) {
+                                    deleteTopicMutation.mutate(topic.name);
+                                  }
+                                }}
+                                className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-slate-400 hover:text-red-500 transition-colors"
+                                title="Delete Topic"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
                             </div>
                           </div>
                         )}
@@ -678,6 +745,66 @@ function Dashboard() {
                 className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl mt-8 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
               >
                 {createTopicMutation.isPending ? 'Creating Topic...' : 'Create Topic'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Topic Modal */}
+      {isEditingTopic && editingTopicName && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit Topic</h3>
+                <p className="text-slate-500 text-sm mt-1 truncate max-w-[250px]">{editingTopicName}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsEditingTopic(false);
+                  setEditingTopicName(null);
+                }}
+                className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                <Plus className="rotate-45" size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    Note: You can only increase the number of partitions. Decreasing partitions is not supported by Kafka.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">New Partition Count</label>
+                  <input
+                    type="number"
+                    min={(topics?.find(t => t.name === editingTopicName)?.partitions ?? 1) + 1}
+                    value={editTopicPartitions}
+                    onChange={(e) => setEditTopicPartitions(parseInt(e.target.value))}
+                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-slate-900 dark:text-white transition-colors"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Current: {topics?.find(t => t.name === editingTopicName)?.partitions ?? 0} partitions
+                  </p>
+                </div>
+              </div>
+              {addPartitionsMutation.error && (
+                <div className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl flex items-start gap-2">
+                  <Shield size={14} className="text-red-500 mt-0.5" />
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                    {String(addPartitionsMutation.error)}
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={() => addPartitionsMutation.mutate()}
+                disabled={addPartitionsMutation.isPending || editTopicPartitions <= (topics?.find(t => t.name === editingTopicName)?.partitions ?? 0)}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl mt-6 transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+              >
+                {addPartitionsMutation.isPending ? 'Updating...' : 'Update Partitions'}
               </button>
             </div>
           </div>
