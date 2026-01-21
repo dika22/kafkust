@@ -17,6 +17,7 @@ import {
   publishMessage,
   consumeMessages,
   getTopicMessageCount,
+  getClusterInfo,
 } from './kafka';
 
 const app = express();
@@ -179,6 +180,20 @@ app.get(
     }
     const count = await getTopicMessageCount(cluster, topic);
     res.json(count);
+  })
+);
+
+app.get(
+  '/api/clusters/:id/info',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id as string;
+    const cluster = getCluster(id);
+    if (!cluster) {
+      res.status(404).json({ error: 'Cluster not found' });
+      return;
+    }
+    const info = await getClusterInfo(cluster);
+    res.json(info);
   })
 );
 

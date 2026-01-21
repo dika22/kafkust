@@ -20,6 +20,18 @@ interface Topic {
   replication_factor: number;
 }
 
+interface ClusterInfo {
+  brokers: { nodeId: number; host: string; port: number }[];
+  controller: number | null;
+  clusterId: string | null;
+  totalPartitions: number;
+  totalReplicas: number;
+  inSyncReplicas: number;
+  outOfSyncReplicas: number;
+  onlineLeaders: number;
+  offlinePartitions: number;
+}
+
 function Dashboard() {
   const [activeView, setActiveView] = useState<'topics' | 'producer' | 'consumer'>('topics');
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
@@ -163,6 +175,8 @@ function Dashboard() {
       return await apiBridge<Topic[]>('list_topics', { clusterId: selectedClusterId });
     },
     placeholderData: (prev) => prev,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   })
 
   // Fetch Message Count for Selected Topic
@@ -176,6 +190,21 @@ function Dashboard() {
         topic: selectedTopicForCount
       });
     },
+    staleTime: 30000,
+    gcTime: 60000,
+    refetchOnWindowFocus: false,
+  })
+
+  // Fetch Cluster Info
+  const { data: clusterInfo } = useQuery<ClusterInfo>({
+    queryKey: ['clusterInfo', selectedClusterId],
+    enabled: !!selectedClusterId,
+    queryFn: async () => {
+      if (!selectedClusterId) throw new Error('No cluster');
+      return await apiBridge<ClusterInfo>('get_cluster_info', { clusterId: selectedClusterId });
+    },
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 
   return (
@@ -191,9 +220,8 @@ function Dashboard() {
         ) : clusters?.length === 0 ? (
           <div className="text-[10px] text-slate-500 font-bold text-center px-2">EMPTY</div>
         ) : clusters?.map(cluster => (
-          <div className="relative group/btn">
+          <div key={cluster.id} className="relative group/btn">
             <button
-              key={cluster.id}
               onClick={() => setSelectedClusterId(cluster.id)}
               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${selectedClusterId === cluster.id
                 ? 'bg-blue-600/10 dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-500/30'
@@ -329,37 +357,64 @@ function Dashboard() {
       <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-950 min-w-0 w-full">
         {activeView === 'topics' ? (
           <>
-            <header className="h-20 flex items-center justify-between px-8 sticky top-0 z-10 bg-white dark:bg-slate-950">
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Topics Explorer</h2>
-                <span className="bg-slate-100 dark:bg-slate-800 mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                  {topics?.length || 0} TOTAL
-                </span>
-              </div>
-              <div className="flex gap-3">
-                <div className="relative group">
+            <header className="border-b border-slate-100 dark:border-slate-800 px-8 py-4 sticky top-0 z-10 bg-white dark:bg-slate-950">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Topics Explorer</h2>
+                  <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                    {topics?.length || 0} TOPICS
+                  </span>
+                </div>
+                <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Search topics..."
+                    placeholder="Search..."
                     value={topicSearch}
                     onChange={(e) => setTopicSearch(e.target.value)}
-                    className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500/50 w-64 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
+                    className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50 w-48 text-slate-900 dark:text-white placeholder:text-slate-400"
                   />
+                  <button
+                    onClick={() => refetchTopics()}
+                    className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-800"
+                  >
+                    <RefreshCw size={14} className={isLoadingTopics ? "animate-spin" : ""} />
+                  </button>
+                  <button
+                    onClick={() => setIsCreatingTopic(true)}
+                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                  >
+                    <Plus size={14} />
+                    Create
+                  </button>
                 </div>
-                <button
-                  onClick={() => refetchTopics()}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all border border-slate-200 dark:border-slate-800"
-                >
-                  <RefreshCw size={18} className={isLoadingTopics ? "animate-spin" : ""} />
-                </button>
-                <button
-                  onClick={() => setIsCreatingTopic(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm text-white"
-                >
-                  <Plus size={18} />
-                  Create Topic
-                </button>
               </div>
+              {clusterInfo && (
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                    <Server size={12} />
+                    <span>{clusterInfo.brokers.length} Brokers</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-blue-500">
+                    <span>{clusterInfo.totalPartitions} Partitions</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-green-500">
+                    <span>{clusterInfo.onlineLeaders} Leaders</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-emerald-500">
+                    <span>{clusterInfo.inSyncReplicas} ISR</span>
+                  </div>
+                  {clusterInfo.outOfSyncReplicas > 0 && (
+                    <div className="flex items-center gap-1.5 text-orange-500">
+                      <span>{clusterInfo.outOfSyncReplicas} Out-of-Sync</span>
+                    </div>
+                  )}
+                  {clusterInfo.offlinePartitions > 0 && (
+                    <div className="flex items-center gap-1.5 text-red-500">
+                      <span>{clusterInfo.offlinePartitions} Offline</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </header>
 
             <main className="flex-1 overflow-auto p-8">

@@ -79,6 +79,8 @@ const commandMappings: Record<string, CommandMapper> = {
     const { clusterId, ...rest } = args || {};
     return httpRequest('POST', `/clusters/${clusterId}/consume`, convertKeysToSnakeCase(rest));
   },
+  
+  get_cluster_info: (args) => httpRequest('GET', `/clusters/${args?.clusterId}/info`),
 };
 
 // Bridge function that calls Tauri invoke or HTTP API
