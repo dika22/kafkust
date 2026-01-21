@@ -1,0 +1,25 @@
+<svg width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Blue gradient -->
+    <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A6FB5"></stop>
+      <stop offset="100%" stop-color="#043A6B"></stop>
+    </linearGradient>
+
+    <!-- Silver gradient -->
+    <linearGradient id="silverGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F2F2F2"></stop>
+      <stop offset="100%" stop-color="#B5B5B5"></stop>
+    </linearGradient>
+  </defs>
+
+  <!-- Left vertical stroke -->
+  <polygon points="250,150 330,150 300,520 220,520" fill="url(#blueGrad)"></polygon>
+
+  <!-- Bottom right stroke -->
+  <polygon points="350,420 600,650 500,650 280,460" fill="url(#blueGrad)"></polygon>
+
+  <!-- Silver curved stroke -->
+  <path d="M260 520 C330 360, 420 260, 580 170
+       L610 200 C450 300, 360 400, 290 560 Z" fill="url(#silverGrad)"></path>
+</svg>

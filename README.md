@@ -4,6 +4,14 @@ Kafkust is a lightning-fast, high-performance Kafka client built with **Rust (Ta
 
 **Available as both a Desktop App and Web App!**
 
+## 📸 Screenshots
+
+![Dashboard View](images/kafkust-one.png)
+*Topic Explorer and Dashboard*
+
+![Producer View](images/add-host-kafka.png)
+*Producer Lab and Message Viewer*
+
 ## 🎯 Key Features
 
 -   **Dual Mode**: Run as a native desktop app OR in your browser

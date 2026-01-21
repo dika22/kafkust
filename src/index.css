@@ -10,6 +10,15 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Dynamic font sizes based on viewport */
+  --text-2xs: clamp(0.5rem, 0.4rem + 0.25vw, 0.625rem);
+  --text-xs: clamp(0.625rem, 0.5rem + 0.3vw, 0.75rem);
+  --text-sm: clamp(0.75rem, 0.65rem + 0.35vw, 0.875rem);
+  --text-base: clamp(0.875rem, 0.75rem + 0.4vw, 1rem);
+  --text-lg: clamp(1rem, 0.85rem + 0.5vw, 1.125rem);
+  --text-xl: clamp(1.125rem, 0.95rem + 0.6vw, 1.25rem);
+  --text-2xl: clamp(1.25rem, 1rem + 0.75vw, 1.5rem);
 }
 
 /* Ensure the app takes full height and handles theme transitions */
@@ -20,6 +29,7 @@ body,
   padding: 0;
   height: 100%;
   width: 100%;
+  font-size: var(--text-base);
 }
 
 /* Smooth theme transitions for all elements */
@@ -34,3 +44,12 @@ body,
 body {
   overflow: hidden;
 }
+
+/* Dynamic text utility classes */
+.text-dynamic-2xs { font-size: var(--text-2xs); }
+.text-dynamic-xs { font-size: var(--text-xs); }
+.text-dynamic-sm { font-size: var(--text-sm); }
+.text-dynamic-base { font-size: var(--text-base); }
+.text-dynamic-lg { font-size: var(--text-lg); }
+.text-dynamic-xl { font-size: var(--text-xl); }
+.text-dynamic-2xl { font-size: var(--text-2xl); }

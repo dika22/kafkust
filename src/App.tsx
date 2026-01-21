@@ -278,50 +278,50 @@ function Dashboard() {
       </div>
 
       {/* Workspace Sidebar */}
-      <div className="w-60 border-r border-slate-200 dark:border-slate-900 flex flex-col bg-slate-50/50 dark:bg-slate-950/40 backdrop-blur-xl shrink-0 overflow-y-auto">
-        <div className="p-6 pb-2">
-          <h1 className="text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400">
+      <div className="w-48 md:w-60 border-r border-slate-200 dark:border-slate-900 flex flex-col bg-slate-50/50 dark:bg-slate-950/40 backdrop-blur-xl shrink-0 overflow-y-auto">
+        <div className="p-4 md:p-6 pb-2">
+          <h1 className="text-dynamic-lg md:text-dynamic-xl font-bold tracking-tight text-blue-600 dark:text-blue-400">
             {clusters?.find(c => c.id === selectedClusterId)?.name || 'Local Kafka'}
           </h1>
-          <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest font-bold">
+          <div className="text-dynamic-2xs text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest font-bold">
             {clusters?.find(c => c.id === selectedClusterId)?.brokers || 'LOCALHOST:9092'}
           </div>
         </div>
 
-        <nav className="p-3 space-y-1 border-b border-slate-200 dark:border-slate-900">
+        <nav className="p-2 md:p-3 space-y-0.5 md:space-y-1 border-b border-slate-200 dark:border-slate-900">
           <button
             onClick={() => setActiveView('topics')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeView === 'topics' ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'}`}
+            className={`w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-dynamic-sm font-bold transition-all ${activeView === 'topics' ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'}`}
           >
-            <LayoutGrid size={18} />
+            <LayoutGrid className="w-4 h-4 md:w-5 md:h-5" />
             Topics
           </button>
           <button
             onClick={() => setActiveView('producer')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeView === 'producer' ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'}`}
+            className={`w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-dynamic-sm font-bold transition-all ${activeView === 'producer' ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'}`}
           >
-            <Send size={18} />
+            <Send className="w-4 h-4 md:w-5 md:h-5" />
             Producer
           </button>
           <button
             onClick={() => setActiveView('consumer')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeView === 'consumer' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900'}`}
+            className={`w-full flex items-center gap-2 md:gap-3 px-2 md:px-3 py-1.5 md:py-2 rounded-lg text-dynamic-sm font-semibold transition-all ${activeView === 'consumer' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900'}`}
           >
-            <Inbox size={18} />
+            <Inbox className="w-4 h-4 md:w-5 md:h-5" />
             Consumer
           </button>
         </nav>
 
-        <div className="w-full h-px bg-slate-100 dark:bg-slate-800 my-4"></div>
+        <div className="w-full h-px bg-slate-100 dark:bg-slate-800 my-2 md:my-4"></div>
 
-        <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
-          <div className="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold px-2 mb-1">Topics</div>
+        <nav className="flex-1 px-1.5 md:px-2 space-y-0.5 overflow-y-auto">
+          <div className="text-dynamic-2xs text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold px-2 mb-1">Topics</div>
           {isLoadingTopics ? (
             <div className="flex items-center justify-center py-2">
               <div className="w-3 h-3 border-2 border-slate-200 dark:border-slate-700 border-t-blue-500 rounded-full animate-spin"></div>
             </div>
           ) : topics?.length === 0 ? (
-            <div className="text-[10px] text-slate-400 dark:text-slate-500 px-2 py-1">No topics</div>
+            <div className="text-dynamic-2xs text-slate-400 dark:text-slate-500 px-2 py-1">No topics</div>
           ) : (
             topics?.filter((topic) => topic.name.toLowerCase().includes(topicSearch.toLowerCase())).map((topic) => (
               <button
@@ -330,23 +330,23 @@ function Dashboard() {
                   setTargetTopic(topic.name);
                   setActiveView('consumer');
                 }}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-all text-left ${targetTopic === topic.name
+                className={`w-full flex items-center gap-1.5 md:gap-2 px-1.5 md:px-2 py-1 md:py-1.5 rounded text-dynamic-xs transition-all text-left ${targetTopic === topic.name
                   ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
               >
-                <HardDrive size={12} className="shrink-0 opacity-60" />
+                <HardDrive className="w-3 h-3 md:w-4 md:h-4 shrink-0 opacity-60" />
                 <span className="truncate">{topic.name}</span>
               </button>
             ))
           )}
         </nav>
 
-        <div className="p-4 border-t border-slate-200 dark:border-slate-900">
-          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
-            <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-2">Cluster Health</div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-green-500">
-              <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
+        <div className="p-2 md:p-4 border-t border-slate-200 dark:border-slate-900">
+          <div className="p-2 md:p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="text-dynamic-2xs uppercase tracking-widest font-bold text-slate-400 mb-2">Cluster Health</div>
+            <div className="flex items-center gap-1.5 md:gap-2 text-dynamic-sm font-semibold text-green-500">
+              <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
               Active Connection
             </div>
           </div>
@@ -357,59 +357,59 @@ function Dashboard() {
       <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-950 min-w-0 w-full">
         {activeView === 'topics' ? (
           <>
-            <header className="border-b border-slate-100 dark:border-slate-800 px-8 py-4 sticky top-0 z-10 bg-white dark:bg-slate-950">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Topics Explorer</h2>
-                  <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-500 dark:text-slate-400">
+            <header className="border-b border-slate-100 dark:border-slate-800 px-4 md:px-8 py-3 md:py-4 sticky top-0 z-10 bg-white dark:bg-slate-950">
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <h2 className="text-dynamic-lg md:text-dynamic-xl font-bold text-slate-900 dark:text-white">Topics Explorer</h2>
+                  <span className="bg-slate-100 dark:bg-slate-800 px-1.5 md:px-2 py-0.5 rounded-full text-dynamic-2xs font-bold text-slate-500 dark:text-slate-400">
                     {topics?.length || 0} TOPICS
                   </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1.5 md:gap-2">
                   <input
                     type="text"
                     placeholder="Search..."
                     value={topicSearch}
                     onChange={(e) => setTopicSearch(e.target.value)}
-                    className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50 w-48 text-slate-900 dark:text-white placeholder:text-slate-400"
+                    className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2 md:px-3 py-1 md:py-1.5 text-dynamic-xs focus:outline-none focus:border-blue-500/50 w-32 md:w-48 text-slate-900 dark:text-white placeholder:text-slate-400"
                   />
                   <button
                     onClick={() => refetchTopics()}
-                    className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-800"
+                    className="p-1 md:p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-800"
                   >
-                    <RefreshCw size={14} className={isLoadingTopics ? "animate-spin" : ""} />
+                    <RefreshCw className={`w-3 h-3 md:w-4 md:h-4 ${isLoadingTopics ? "animate-spin" : ""}`} />
                   </button>
                   <button
                     onClick={() => setIsCreatingTopic(true)}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                    className="flex items-center gap-1 md:gap-1.5 bg-blue-600 hover:bg-blue-700 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-dynamic-xs font-semibold text-white"
                   >
-                    <Plus size={14} />
+                    <Plus className="w-3 h-3 md:w-4 md:h-4" />
                     Create
                   </button>
                 </div>
               </div>
               {clusterInfo && (
-                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider">
-                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-                    <Server size={12} />
+                <div className="flex flex-wrap items-center gap-2 md:gap-4 text-dynamic-2xs font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-1 md:gap-1.5 text-slate-500 dark:text-slate-400">
+                    <Server className="w-3 h-3 md:w-4 md:h-4" />
                     <span>{clusterInfo.brokers.length} Brokers</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-blue-500">
+                  <div className="flex items-center gap-1 md:gap-1.5 text-blue-500">
                     <span>{clusterInfo.totalPartitions} Partitions</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-green-500">
+                  <div className="flex items-center gap-1 md:gap-1.5 text-green-500">
                     <span>{clusterInfo.onlineLeaders} Leaders</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-emerald-500">
+                  <div className="flex items-center gap-1 md:gap-1.5 text-emerald-500">
                     <span>{clusterInfo.inSyncReplicas} ISR</span>
                   </div>
                   {clusterInfo.outOfSyncReplicas > 0 && (
-                    <div className="flex items-center gap-1.5 text-orange-500">
+                    <div className="flex items-center gap-1 md:gap-1.5 text-orange-500">
                       <span>{clusterInfo.outOfSyncReplicas} Out-of-Sync</span>
                     </div>
                   )}
                   {clusterInfo.offlinePartitions > 0 && (
-                    <div className="flex items-center gap-1.5 text-red-500">
+                    <div className="flex items-center gap-1 md:gap-1.5 text-red-500">
                       <span>{clusterInfo.offlinePartitions} Offline</span>
                     </div>
                   )}
@@ -450,7 +450,7 @@ function Dashboard() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
                   {topics?.filter((topic) => topic.name.toLowerCase().includes(topicSearch.toLowerCase())).map((topic) => {
                     const isSelected = selectedTopicForCount === topic.name;
                     return (
@@ -470,29 +470,29 @@ function Dashboard() {
                           setTargetTopic(topic.name);
                           setActiveView('consumer');
                         }}
-                        className={`bg-white dark:bg-slate-900 border rounded-xl p-3 transition-all hover:shadow-md dark:hover:shadow-none group cursor-pointer flex flex-col ${isSelected
+                        className={`bg-white dark:bg-slate-900 border rounded-lg md:rounded-xl p-2 md:p-3 transition-all hover:shadow-md dark:hover:shadow-none group cursor-pointer flex flex-col ${isSelected
                           ? 'border-blue-500 ring-1 ring-blue-500'
                           : 'border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-700'
                           }`}
                       >
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                            <HardDrive size={14} strokeWidth={1.5} />
+                        <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
+                          <div className="w-5 h-5 md:w-7 md:h-7 rounded-md md:rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <HardDrive className="w-3 h-3 md:w-4 md:h-4" strokeWidth={1.5} />
                           </div>
-                          <h3 className="text-sm font-bold truncate text-slate-900 dark:text-white flex-1">{topic.name}</h3>
+                          <h3 className="text-dynamic-sm font-bold truncate text-slate-900 dark:text-white flex-1">{topic.name}</h3>
                         </div>
 
-                        <div className="flex flex-wrap gap-2 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                          <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap gap-1.5 md:gap-2 text-dynamic-2xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                          <div className="flex items-center gap-0.5 md:gap-1">
                             <div className="w-1 h-1 rounded-full bg-blue-400"></div>
                             {topic.partitions}P
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-0.5 md:gap-1">
                             <div className="w-1 h-1 rounded-full bg-blue-400"></div>
                             {topic.replication_factor}R
                           </div>
                           {isSelected && (
-                            <div className="flex items-center gap-1 text-green-500">
+                            <div className="flex items-center gap-0.5 md:gap-1 text-green-500">
                               <div className="w-1 h-1 rounded-full bg-green-500"></div>
                               {isLoadingMessageCount ? '...' : `${topicMessageCount?.toLocaleString() ?? 0}M`}
                             </div>
@@ -500,8 +500,8 @@ function Dashboard() {
                         </div>
 
                         {isSelected && (
-                          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
-                            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                          <div className="mt-1.5 md:mt-2 pt-1.5 md:pt-2 border-t border-slate-100 dark:border-slate-800/50">
+                            <div className="text-dynamic-2xs text-blue-600 dark:text-blue-400 font-semibold">
                               Click to view messages
                             </div>
                           </div>
