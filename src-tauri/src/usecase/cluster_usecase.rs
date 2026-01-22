@@ -90,6 +90,18 @@ impl ClusterUsecase {
             .await
     }
 
+    pub async fn delete_topic(&self, id: Uuid, name: String) -> Result<()> {
+        let clusters = self.cluster_repo.list_clusters().await?;
+        let cluster = clusters
+            .into_iter()
+            .find(|c| c.id == id)
+            .ok_or_else(|| anyhow::anyhow!("Cluster not found"))?;
+
+        let password = self.secret_repo.get_password(&cluster.id.to_string()).ok();
+
+        self.kafka_infra.delete_topic(&cluster, password, name).await
+    }
+
     pub async fn update_cluster(&self, cluster: Cluster, password: Option<String>) -> Result<()> {
         self.cluster_repo.save_cluster(&cluster).await?;
         if let Some(p) = password {

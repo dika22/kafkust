@@ -160,6 +160,40 @@ impl KafkaInfrastructure {
         Ok(())
     }
 
+    pub async fn delete_topic(
+        &self,
+        cluster: &Cluster,
+        password: Option<String>,
+        name: String,
+    ) -> Result<()> {
+        use rdkafka::admin::AdminOptions;
+
+        let client: AdminClient<DefaultClientContext> =
+            self.create_config(cluster, password).create()?;
+
+        let opts = AdminOptions::new().operation_timeout(Some(Duration::from_secs(30)));
+
+        let results = client
+            .delete_topics(&[&name], &opts)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to delete topic: {}", e))?;
+
+        for result in results {
+            match result {
+                Ok(_) => {}
+                Err((topic, code)) => {
+                    return Err(anyhow::anyhow!(
+                        "Failed to delete topic '{}': {:?}",
+                        topic,
+                        code
+                    ));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn publish_message(
         &self,
         cluster: &Cluster,

@@ -108,6 +108,19 @@ async fn publish_message(
 }
 
 #[tauri::command]
+async fn delete_topic(
+    state: State<'_, AppState>,
+    cluster_id: Uuid,
+    topic: String,
+) -> Result<(), Error> {
+    state
+        .cluster_usecase
+        .delete_topic(cluster_id, topic)
+        .await
+        .map_err(|e| Error::Kafka(e.to_string()))
+}
+
+#[tauri::command]
 async fn delete_cluster(state: State<'_, AppState>, cluster_id: Uuid) -> Result<(), Error> {
     state
         .cluster_usecase
@@ -209,6 +222,7 @@ pub fn run() {
             delete_cluster,
             test_connection,
             create_topic,
+            delete_topic,
             publish_message,
             consume_messages,
             get_topic_message_count
